@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QDriveControl</class>
+ <widget class="QWidget" name="QDriveControl">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>320</width>
+    <height>114</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>320</width>
+    <height>114</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>320</width>
+    <height>114</height>
+   </size>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="1">
+    <widget class="QPushButton" name="pbForward">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>forward</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="pbLeft">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>left</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="pbStop">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>stop</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QPushButton" name="pbRight">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>right</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="pbBackward">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>backward</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+ <slots>
+  <slot>forwardPressed()</slot>
+  <slot>forwardReleased()</slot>
+ </slots>
+</ui>

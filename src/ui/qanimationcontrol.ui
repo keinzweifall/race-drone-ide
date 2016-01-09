@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>QAnimationControl</class>
+ <widget class="QWidget" name="QAnimationControl">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>320</width>
+    <height>148</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>320</width>
+    <height>148</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>320</width>
+    <height>148</height>
+   </size>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QPushButton" name="pbJumpWide">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>jump wide</string>
+     </property>
+     <property name="shortcut">
+      <string>W</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QPushButton" name="pbBoost">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>boost</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QPushButton" name="pbTap">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>tap</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="pbJumpHigh">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>jump high</string>
+     </property>
+     <property name="shortcut">
+      <string>J</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="pbSpin2Posture">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>spin2posture</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QPushButton" name="pbSlowShake">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>slow shake</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="pbSpinJump">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>spin jump</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="pbSpiral">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>spiral</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QPushButton" name="pbMetronome">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>metronome</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QPushButton" name="pbSpin">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>spin</string>
+     </property>
+     <property name="shortcut">
+      <string>S</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QPushButton" name="pbOndulation">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>ondulation</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="pbSlalom">
+     <property name="minimumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>88</width>
+       <height>28</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>slalom</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
