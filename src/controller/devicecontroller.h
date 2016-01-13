@@ -32,11 +32,18 @@ public:
   bool connect();
   bool disconnect();
   bool isConnected();
-  
+  bool enterControlLoop();
+  bool exitControlLoop();
+  int ping();
   RACEDRONE_VALUES_T getValues();
   
 private:
   DEVICE_CONTROLLER_DATA_T* _handle;
+  void _init_handle();
+  bool _internal_connect();
+  
+  static void* _reader_loop(void* data);
+  static void* _sender_loop(void* data);
 };
 
 #endif // DEVICECONTROLLER_H

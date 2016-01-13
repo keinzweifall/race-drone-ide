@@ -19,6 +19,7 @@
 #define QDRONEDESKTOP_H
 
 #include <qt4/QtGui/QMainWindow>
+#include <boost/concept_check.hpp>
 
 #include "model/racedronedata.h"
 #include "ui_qdronedesktop.h"
@@ -26,20 +27,26 @@
 class QAnimationControl;
 class QDriveControl;
 class QDroneDashboard;
+class DeviceController;
 
 class QDroneDesktop : public QMainWindow, public Ui::QDroneDesktop
 {
-    Q_OBJECT
+  Q_OBJECT
 public:
-    QDroneDesktop();
+  QDroneDesktop();
 
 protected:
-    void closeEvent(QCloseEvent *event);
+  void closeEvent(QCloseEvent *event);
+  
+private slots:
+  void connectDrone();
+  void disconnectDrone();
     
 private:
-    QAnimationControl* _pAnimCtrl;
-    QDriveControl* _pDriveCtrl;
-    QDroneDashboard* _pDashboard;
+  QAnimationControl* _pAnimCtrl;
+  QDriveControl* _pDriveCtrl;
+  QDroneDashboard* _pDashboard;
+  DeviceController* _dctrl;
 };
 
 #endif // QDRONEDESKTOP_H

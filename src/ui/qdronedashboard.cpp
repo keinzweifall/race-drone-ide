@@ -26,12 +26,11 @@
 
 int QDroneDashboard::cREFRESH_INTERVAL = 100;
 
-QDroneDashboard::QDroneDashboard(QWidget* parent) : QFrame(parent) {
+QDroneDashboard::QDroneDashboard(DeviceController* pdc, QWidget* parent) : QFrame(parent) {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "QDroneDashboard::QDroneDashboard(QWidget* parent)";
   
   setupUi(this);
   this->setFrameShape(QFrame::Box);
-  _dctrl = new DeviceController();
   _timer = nullptr;
 }
 

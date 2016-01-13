@@ -19,6 +19,7 @@
 
 #include <boost/log/trivial.hpp>
 
+#include "controller/devicecontroller.h"
 #include "ui/qdronedesktop.h"
 #include "ui/qanimationcontrol.h"
 #include "ui/qdrivecontrol.h"
@@ -26,19 +27,40 @@
 
 QDroneDesktop::QDroneDesktop() {
   setupUi(this);
+  
+  _dctrl = new DeviceController();
 
-  _pDashboard = new QDroneDashboard(this->wCtrlContainer);
-  _pDriveCtrl = new QDriveControl(this->wCtrlContainer);
-  _pAnimCtrl = new QAnimationControl(this->wCtrlContainer);
+  _pDashboard = new QDroneDashboard(_dctrl, this->wCtrlContainer);
+  _pDriveCtrl = new QDriveControl(_dctrl, this->wCtrlContainer);
+  _pAnimCtrl = new QAnimationControl(_dctrl, this->wCtrlContainer);
 
   this->wCtrlContainer->layout()->addWidget(_pDashboard);
   this->wCtrlContainer->layout()->addWidget(_pDriveCtrl);
   this->wCtrlContainer->layout()->addWidget(_pAnimCtrl);
-  
+
+  connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectDrone()));
+  connect(actionDisonnect, SIGNAL(triggered()), this, SLOT(disconnectDrone()));
   connect(actionStart_Updating, SIGNAL(triggered()), _pDashboard, SLOT(startUpdating()));
   connect(actionStop_Updating, SIGNAL(triggered()), _pDashboard, SLOT(stopUpdating()));
 }
 
 void QDroneDesktop::closeEvent(QCloseEvent *event) {
+  if (_dctrl->isConnected()) {
+    _dctrl->exitControlLoop();
+    _dctrl->disconnect();
+  }
+  delete _dctrl;
+  _dctrl = nullptr;
 }
 
+void QDroneDesktop::connectDrone() {
+  _dctrl->connect();
+  _dctrl->enterControlLoop();
+  usleep(50000);
+  _dctrl->ping();
+}
+
+void QDroneDesktop::disconnectDrone() {
+  _dctrl->exitControlLoop();
+  _dctrl->disconnect();
+}

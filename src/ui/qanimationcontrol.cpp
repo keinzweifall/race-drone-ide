@@ -19,7 +19,7 @@
 
 #include "ui/qanimationcontrol.h"
 
-QAnimationControl::QAnimationControl(QWidget* parent) : QFrame(parent) {
+QAnimationControl::QAnimationControl(DeviceController* pdc, QWidget* parent) : _dctrl(pdc), QFrame(parent) {
   setupUi(this);
   this->setFrameShape(QFrame::Box);
 }

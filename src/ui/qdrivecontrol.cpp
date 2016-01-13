@@ -19,7 +19,7 @@
 
 #include "ui/qdrivecontrol.h"
 
-QDriveControl::QDriveControl(QWidget* parent) : QFrame(parent) {
+QDriveControl::QDriveControl(DeviceController* pdc, QWidget* parent) : _dctrl(pdc), QFrame(parent) {
   setupUi(this);
 
   this->setFrameShape(QFrame::Box);

@@ -32,7 +32,7 @@ class QDroneDashboard : public QFrame, public Ui::QDroneDashboard
     Q_OBJECT
     
 public:
-    QDroneDashboard(QWidget* parent = 0);
+    QDroneDashboard(DeviceController* pdc, QWidget* parent = 0);
     
 private slots:
   void startUpdating();

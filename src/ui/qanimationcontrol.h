@@ -22,12 +22,13 @@
 
 #include "ui_qanimationcontrol.h"
 
+class DeviceController;
 
 class QAnimationControl : public QFrame, public Ui::QAnimationControl
 {
     Q_OBJECT
 public:
-    QAnimationControl(QWidget* parent = 0);
+    QAnimationControl(DeviceController* pdc, QWidget* parent = 0);
     
 private slots:
   void on_pbJumpWide_clicked();
@@ -44,6 +45,8 @@ private slots:
   void on_pbSlalom_clicked();
 
 private:
+  DeviceController* _dctrl;
+
 };
 
 #endif // QANIMATIONCONTROL_H

@@ -22,12 +22,13 @@
 
 #include "ui_qdrivecontrol.h"
 
+class DeviceController;
 
 class QDriveControl : public QFrame, public Ui::QDriveControl
 {
     Q_OBJECT
 public:
-    QDriveControl(QWidget* parent = 0);
+    QDriveControl(DeviceController* pdc, QWidget* parent = 0);
   
 public slots:
     void forwardPressed();
@@ -46,6 +47,8 @@ private:
     bool _backward;
     bool _right;
     bool _left;
+    DeviceController* _dctrl;
+
 };
 
 #endif // QDRIVECONTROL_H
