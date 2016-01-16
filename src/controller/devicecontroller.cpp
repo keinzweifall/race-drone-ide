@@ -16,6 +16,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <boost/log/trivial.hpp>
 #include <boost/concept_check.hpp>
@@ -76,9 +77,9 @@ struct DEVICE_CONTROLLER_DATA {
   READER_THREAD_DATA_T* _rdata_ack;
   READER_THREAD_DATA_T* _rdata_nonack;
   
-  // FILE *video_out;
-  // int _writeImgs;
-  // int _frameNb;
+  // FILE *_video_out;
+  VideoFrameFeed* _video_feed;
+  
 };
 
 
@@ -87,6 +88,9 @@ eARDISCOVERY_ERROR discovery_connection_receive_json_callback (uint8_t *dataRx, 
 void on_disconnect_network (ARNETWORK_Manager_t *manager, ARNETWORKAL_Manager_t *alManager, void *customData);
 void register_arcommands_callbacks (DeviceController *pdc);
 void unregister_arcommands_callbacks();
+uint8_t *video_frame_complete_cb(eARSTREAM_READER_CAUSE cause, uint8_t *frame, uint32_t frameSize, int numberOfSkippedFrames, int isFlushFrame, uint32_t *newBufferCapacity, void *custom);
+eARNETWORK_MANAGER_CALLBACK_RETURN arnetworkCmdCallback(int buffer_id, uint8_t *data, void *custom, eARNETWORK_MANAGER_CALLBACK_STATUS cause);
+
 
 /*
  * @TODO begin this was copy & pasted from sample, change later
@@ -212,7 +216,11 @@ bool DeviceController::disconnect() {
     BOOST_LOG_TRIVIAL(trace) << __LINE__ << "wasn't connected";
     return true;
   }
-
+  
+  if (_handle->_video_feed) {
+    stopVideo();
+  }
+  
   if (_handle->_netManager) {
     ARNETWORK_Manager_Stop(_handle->_netManager);
     if (_handle->_rxThread) {
@@ -386,8 +394,9 @@ bool DeviceController::_internal_connect() {
   ARDISCOVERY_Connection_Delete(&discoveryData);
   
   // Init Video Stream
-  // ARSTREAM_Reader_InitStreamDataBuffer (&d2cParams[2], JS_NET_DC_VIDEO_ID, _handle->_arstreamFragSize, _handle->_arstreamFragNb);
-  // // optional according to docu ARSTREAM_Reader_InitStreamAckBuffer (&c2dParams[2], JS_NET_CD_VIDEO_ACK_ID);
+  ARSTREAM_Reader_InitStreamDataBuffer(&d2cParams[2], JS_NET_DC_VIDEO_ID, _handle->_arstreamFragSize, _handle->_arstreamFragNb);
+  // optional according to docu 
+  ARSTREAM_Reader_InitStreamAckBuffer(&c2dParams[2], JS_NET_CD_VIDEO_ACK_ID);
   
   // initialize ARNetworkALManager
   _handle->_alManager = ARNETWORKAL_Manager_New(&netAlError);
@@ -404,8 +413,7 @@ bool DeviceController::_internal_connect() {
   
   // initialize ARNetworkManager
   // _handle->_netManager = ARNETWORK_Manager_New(_handle->_alManager, numC2dParams, c2dParams, numD2cParams, d2cParams, pingDelay, on_disconnect_network, _handle, &netError);
-  // temporarily without video, thus numC2dParams-1, numD2cParams-1
-  _handle->_netManager = ARNETWORK_Manager_New(_handle->_alManager, numC2dParams-1, c2dParams, numD2cParams-1, d2cParams, pingDelay, on_disconnect_network, _handle, &netError);
+  _handle->_netManager = ARNETWORK_Manager_New(_handle->_alManager, numC2dParams, c2dParams, numD2cParams, d2cParams, pingDelay, on_disconnect_network, _handle, &netError);
   if (netError != ARNETWORK_OK) {
     BOOST_LOG_TRIVIAL(error) << __LINE__ << "error creating network-manager : " << ARNETWORK_Error_ToString(netError);
     return false;
@@ -425,17 +433,148 @@ bool DeviceController::_internal_connect() {
   return true;
 }
 
-eARNETWORK_MANAGER_CALLBACK_RETURN arnetworkCmdCallback(int buffer_id, uint8_t *data, void *custom, eARNETWORK_MANAGER_CALLBACK_STATUS cause)
-{
-  eARNETWORK_MANAGER_CALLBACK_RETURN retval = ARNETWORK_MANAGER_CALLBACK_RETURN_DEFAULT;
-  
-  BOOST_LOG_TRIVIAL(trace) << __LINE__ << "arnetworkCmdCallback bufferId: " << buffer_id << ", cause: " << cause;
 
-  if (cause == ARNETWORK_MANAGER_CALLBACK_STATUS_TIMEOUT) {
-      retval = ARNETWORK_MANAGER_CALLBACK_RETURN_DATA_POP;
+VideoFrameFeed* DeviceController::startVideo() {
+  BOOST_LOG_TRIVIAL(trace) << __LINE__ << "DeviceController::startVideo()";
+  
+  eARSTREAM_ERROR err = ARSTREAM_OK;
+
+  _handle->_video_feed = new VideoFrameFeed(_handle->_arstreamFragSize, 1000);
+
+  // check if frame size is set
+  if (_handle->_arstreamFragSize == 0 || _handle->_arstreamFragNb == 0) {
+    BOOST_LOG_TRIVIAL(error) << __LINE__ << "drone did not send video parameters in json data.";
+    return nullptr;
+  }
+  
+  _handle->_videoFrameSize = _handle->_arstreamFragSize * _handle->_arstreamFragNb;
+  _handle->_videoFrame = (uint8_t*)std::malloc(_handle->_videoFrameSize);
+	
+  _handle->_streamReader = ARSTREAM_Reader_New (_handle->_netManager, JS_NET_DC_VIDEO_ID, JS_NET_CD_VIDEO_ACK_ID, video_frame_complete_cb, _handle->_videoFrame, _handle->_videoFrameSize, _handle->_arstreamFragSize, _handle->_arstreamAckDelay, _handle, &err);
+  if (err != ARSTREAM_OK) {
+    BOOST_LOG_TRIVIAL(error) << "Error during ARStream creation : " << ARSTREAM_Error_ToString(err);
+    return nullptr;
   }
 
-  return retval;
+  if (ARSAL_Thread_Create(&(_handle->_videoRxThread), ARSTREAM_Reader_RunDataThread, _handle->_streamReader) != 0) {
+    BOOST_LOG_TRIVIAL(error) << "Creation of video Rx thread failed.";
+    return nullptr;
+  }
+
+  if (ARSAL_Thread_Create(&(_handle->_videoTxThread), ARSTREAM_Reader_RunAckThread, _handle->_streamReader) != 0) {
+    BOOST_LOG_TRIVIAL(error) << "Creation of video Tx thread failed.";
+    return nullptr;
+  }
+
+  // tell drone to send video feed
+  _send_media_stream(true);
+  
+  return _handle->_video_feed;
+}
+
+void DeviceController::stopVideo() {
+  BOOST_LOG_TRIVIAL(trace) << __LINE__ << "DeviceController::stopVideo()";
+  
+  // tell drone to stop sending video feed
+  _send_media_stream(false);
+  
+  usleep(10000);
+
+  delete _handle->_video_feed;
+  _handle->_video_feed = nullptr;
+  
+  if (_handle->_streamReader) {
+    ARSTREAM_Reader_StopReader(_handle->_streamReader);
+
+    // Optional, but better for speed:
+    ARNETWORKAL_Manager_Unlock(_handle->_alManager);
+
+    if (_handle->_videoRxThread != NULL) {
+      ARSAL_Thread_Join(_handle->_videoRxThread, NULL);
+      ARSAL_Thread_Destroy(&(_handle->_videoRxThread));
+      _handle->_videoRxThread = NULL;
+    }
+    if (_handle->_videoTxThread != NULL) {
+      ARSAL_Thread_Join(_handle->_videoTxThread, NULL);
+      ARSAL_Thread_Destroy(&(_handle->_videoTxThread));
+      _handle->_videoTxThread = NULL;
+    }
+
+    ARSTREAM_Reader_Delete (&(_handle->_streamReader));
+  }
+
+  if (_handle->_videoFrame) {
+    free (_handle->_videoFrame);
+    _handle->_videoFrame = NULL;
+  }
+}
+
+int DeviceController::_send_media_stream(bool streamOn) {
+  BOOST_LOG_TRIVIAL(trace) << __LINE__ << "DeviceController::_send_begin_stream()";
+  
+  int sentStatus = 1;
+  u_int8_t cmdBuffer[128];
+  int32_t cmdSize = 0;
+  eARCOMMANDS_GENERATOR_ERROR cmdError;
+  eARNETWORK_ERROR netError = ARNETWORK_ERROR;
+
+  // Send Streaming begin command
+  cmdError = ARCOMMANDS_Generator_GenerateJumpingSumoMediaStreamingVideoEnable(cmdBuffer, sizeof(cmdBuffer), &cmdSize, (streamOn) ? 1 : 0);
+  if (cmdError == ARCOMMANDS_GENERATOR_OK) {
+    netError = ARNETWORK_Manager_SendData(_handle->_netManager, JS_NET_CD_ACK_ID, cmdBuffer, cmdSize, NULL, &(arnetworkCmdCallback), 1);
+  }
+
+  if ((cmdError != ARCOMMANDS_GENERATOR_OK) || (netError != ARNETWORK_OK)) {
+    BOOST_LOG_TRIVIAL(error) << __LINE__ << "failed to send JumpingSump.MediaStreamingVideoEnable cmd : " << cmdError << ", " << ARNETWORK_Error_ToString(netError);
+    sentStatus = 0;
+  }
+
+  return sentStatus;
+}
+
+uint8_t *video_frame_complete_cb(eARSTREAM_READER_CAUSE cause, uint8_t *frame, uint32_t frameSize, int numberOfSkippedFrames, int isFlushFrame, uint32_t *newBufferCapacity, void *custom)
+{
+  uint8_t *ret = NULL;
+  DEVICE_CONTROLLER_DATA_T *dcd = (DEVICE_CONTROLLER_DATA_T *)custom;
+
+  switch(cause) {
+    case ARSTREAM_READER_CAUSE_FRAME_COMPLETE:
+      /* Here, the mjpeg video frame is in the "frame" pointer, with size "frameSize" bytes
+      You can do what you want, but keep it as short as possible, as the video is blocked until you return from this callback.
+      Typically, you will either copy the frame and return the same buffer to the library, or store the buffer
+      in a fifo for pending operations, and provide a new one.
+      In this sample, we do nothing and just pass the buffer back*/
+      // fwrite(frame, frameSize, 1, dcd->_video_out);
+      // fflush (dcd->_video_out);
+      dcd->_video_feed->setNewFrame(dcd->_videoFrame);
+      ret = dcd->_videoFrame;
+      *newBufferCapacity = dcd->_videoFrameSize;
+      
+    break;
+    case ARSTREAM_READER_CAUSE_FRAME_TOO_SMALL:
+      /* This case should not happen, as we've allocated a frame pointer to the maximum possible size. */
+      BOOST_LOG_TRIVIAL(error) << __LINE__ << "ARSTREAM_READER_CAUSE_FRAME_TOO_SMALL";
+      ret = dcd->_videoFrame;
+      *newBufferCapacity = dcd->_videoFrameSize;
+    break;
+    case ARSTREAM_READER_CAUSE_COPY_COMPLETE:
+      /* Same as before ... but return value are ignored, so we just do nothing */
+    break;
+    case ARSTREAM_READER_CAUSE_CANCEL:
+      /* Called when the library closes, return values ignored, so do nothing here */
+    break;
+    default:
+    break;
+  }
+
+  return ret;
+}
+
+
+eARNETWORK_MANAGER_CALLBACK_RETURN arnetworkCmdCallback(int buffer_id, uint8_t *data, void *custom, eARNETWORK_MANAGER_CALLBACK_STATUS cause) {
+  // BOOST_LOG_TRIVIAL(trace) << __LINE__ << "arnetworkCmdCallback bufferId: " << buffer_id << ", cause: " << cause;
+
+  return (cause == ARNETWORK_MANAGER_CALLBACK_STATUS_TIMEOUT) ? ARNETWORK_MANAGER_CALLBACK_RETURN_DATA_POP : ARNETWORK_MANAGER_CALLBACK_RETURN_DEFAULT;
 }
 
 
@@ -496,7 +635,7 @@ void* DeviceController::_sender_loop(void* p) {
   while (!g_StopFlag) {
     usleep(50000);
     // send_all_states_cmd(dcp->_handle);
-    send_PCMD_cmd(dcp->_handle, 1, 10, 0);
+    // send_PCMD_cmd(dcp->_handle, 1, 10, 0);
   }
   
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "leaving sender_loop...";
@@ -625,6 +764,9 @@ eARDISCOVERY_ERROR discovery_connection_receive_json_callback (uint8_t *dataRx, 
 	v = d[ARDISCOVERY_CONNECTION_JSON_C2DPORT_KEY];
 	dcdata->_c2dPort = v.GetInt();
 	
+	dcdata->_arstreamFragSize = 0;
+	dcdata->_arstreamFragNb = 0;
+	
 	if (d.HasMember(ARDISCOVERY_CONNECTION_JSON_ARSTREAM_FRAGMENT_SIZE_KEY)) {
 	  v = d[ARDISCOVERY_CONNECTION_JSON_ARSTREAM_FRAGMENT_SIZE_KEY];
 	  dcdata->_arstreamFragSize = v.GetInt();
@@ -639,7 +781,7 @@ eARDISCOVERY_ERROR discovery_connection_receive_json_callback (uint8_t *dataRx, 
 	  v = d[ARDISCOVERY_CONNECTION_JSON_ARSTREAM_MAX_ACK_INTERVAL_KEY];
 	  dcdata->_arstreamAckDelay = v.GetInt();
 	}
-	
+
 	err = ARDISCOVERY_OK;
     }
     

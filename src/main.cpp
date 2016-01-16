@@ -15,6 +15,8 @@
  * 
  */
 
+#include <signal.h>
+
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
@@ -55,47 +57,22 @@ void init_logging()
   );
 }
 
-/*
-  const char * test = "{\"project\":\"rapidjson\",\"stars\":10}";;
-
-  rapidjson::Document d;
-  d.Parse(test);
-  rapidjson::Value &v = d["stars"];
-  std::cout << "v=" << v.GetInt() << std::endl;
-  
-  rapidjson::StringBuffer s;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(s);
-  
-  writer.StartObject();
-  writer.String("hello");
-  writer.String("world");
-  writer.String("t");
-  writer.Bool(true);
-  writer.String("f");
-  writer.Bool(false);
-  writer.String("n");
-  writer.Null();
-  writer.String("i");
-  writer.Uint(123);
-  writer.String("pi");
-  writer.Double(3.1416);
-  writer.String("a");
-  writer.StartArray();
-  for (unsigned i = 0; i < 4; i++)
-      writer.Uint(i);
-  writer.EndArray();
-  writer.EndObject();
-
-  std::cout << s.GetString() << std::endl;
-
-  return 0;
-  
- */
-
 int main(int argc, char** argv)
 {
   init_logging();
   logging::add_common_attributes();
+
+  /*
+  pid_t child = 0;
+
+  // fork the process to launch ffplay
+  if ((child = fork()) == 0)
+  {
+    // execlp("ffplay", "ffplay", "-i", "video_fifo", "-f", "mjpeg", NULL);
+    execlp("avplay", "avplay", "-i", "video_fifo", "-f", "mjpeg", NULL);
+    return -1;
+  }
+  */
 
   QApplication app(argc, argv);
   QDroneDesktop desktop;
@@ -104,6 +81,13 @@ int main(int argc, char** argv)
   int lRetval = app.exec();
 
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "lRetval=" << lRetval;
+
+  /*
+  if (child > 0)
+  {
+    kill(child, SIGKILL);
+  }
+  */
 
   return lRetval;
 }

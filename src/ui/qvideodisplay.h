@@ -15,42 +15,30 @@
  * 
  */
 
-#ifndef QDRONEDESKTOP_H
-#define QDRONEDESKTOP_H
+#ifndef QVIDEODISPLAY_H
+#define QVIDEODISPLAY_H
 
-#include <qt4/QtGui/QMainWindow>
-#include <boost/concept_check.hpp>
+#include <qt4/QtGui/QWidget>
 
-#include "model/racedronedata.h"
-#include "ui_qdronedesktop.h"
+#include "ui_qvideodisplay.h"
 
-class QAnimationControl;
-class QDriveControl;
-class QDroneDashboard;
-class QVideoDisplay;
 class DeviceController;
+class QImageProvider;
 
-class QDroneDesktop : public QMainWindow, public Ui::QDroneDesktop
+class QVideoDisplay : public QWidget, Ui::QVideoDisplay
 {
   Q_OBJECT
-public:
-  QDroneDesktop();
 
-protected:
-  void closeEvent(QCloseEvent *event);
+public:
+  QVideoDisplay(DeviceController* pdc, QWidget* parent = 0);
+  ~QVideoDisplay();
   
 private slots:
-  void connectDrone();
-  void disconnectDrone();
-  void startVideo();
-  void stopVideo();
-    
+  void setNewImage();
+
 private:
-  QAnimationControl* _pAnimCtrl;
-  QDriveControl* _pDriveCtrl;
-  QDroneDashboard* _pDashboard;
-  QVideoDisplay* _pVideo;
   DeviceController* _dctrl;
+  QImageProvider* _imgProvider;
 };
 
-#endif // QDRONEDESKTOP_H
+#endif // QVIDEODISPLAY_H

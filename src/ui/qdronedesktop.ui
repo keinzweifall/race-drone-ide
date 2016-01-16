@@ -31,8 +31,14 @@
         <widget class="QFrame" name="wVideoContainer">
          <property name="minimumSize">
           <size>
-           <width>380</width>
-           <height>340</height>
+           <width>640</width>
+           <height>480</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>640</width>
+           <height>480</height>
           </size>
          </property>
          <property name="frameShape">
@@ -71,7 +77,7 @@
          <x>0</x>
          <y>0</y>
          <width>1249</width>
-         <height>372</height>
+         <height>266</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout">
@@ -99,6 +105,8 @@
     </property>
     <addaction name="actionConnect"/>
     <addaction name="actionDisonnect"/>
+    <addaction name="actionStart_Video"/>
+    <addaction name="actionStop_Video"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -165,6 +173,16 @@
   <action name="actionStop_Updating">
    <property name="text">
     <string>Stop Updating</string>
+   </property>
+  </action>
+  <action name="actionStart_Video">
+   <property name="text">
+    <string>Start Video</string>
+   </property>
+  </action>
+  <action name="actionStop_Video">
+   <property name="text">
+    <string>Stop Video</string>
    </property>
   </action>
  </widget>

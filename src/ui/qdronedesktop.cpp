@@ -24,6 +24,7 @@
 #include "ui/qanimationcontrol.h"
 #include "ui/qdrivecontrol.h"
 #include "ui/qdronedashboard.h"
+#include "ui/qvideodisplay.h"
 
 QDroneDesktop::QDroneDesktop() {
   setupUi(this);
@@ -37,9 +38,16 @@ QDroneDesktop::QDroneDesktop() {
   this->wCtrlContainer->layout()->addWidget(_pDashboard);
   this->wCtrlContainer->layout()->addWidget(_pDriveCtrl);
   this->wCtrlContainer->layout()->addWidget(_pAnimCtrl);
+  
+  QGridLayout* videoLayout = new QGridLayout();
+  videoLayout->setContentsMargins(0, 0, 0, 0);
+  videoLayout->setObjectName(QString::fromUtf8("videoLayout"));
+  wVideoContainer->setLayout(videoLayout);
 
   connect(actionConnect, SIGNAL(triggered()), this, SLOT(connectDrone()));
   connect(actionDisonnect, SIGNAL(triggered()), this, SLOT(disconnectDrone()));
+  connect(actionStart_Video, SIGNAL(triggered()), this, SLOT(startVideo()));
+  connect(actionStop_Video, SIGNAL(triggered()), this, SLOT(stopVideo()));
   connect(actionStart_Updating, SIGNAL(triggered()), _pDashboard, SLOT(startUpdating()));
   connect(actionStop_Updating, SIGNAL(triggered()), _pDashboard, SLOT(stopUpdating()));
 }
@@ -56,11 +64,27 @@ void QDroneDesktop::closeEvent(QCloseEvent *event) {
 void QDroneDesktop::connectDrone() {
   _dctrl->connect();
   _dctrl->enterControlLoop();
-  usleep(50000);
+  usleep(10000);
   _dctrl->ping();
 }
 
 void QDroneDesktop::disconnectDrone() {
+  if (_pVideo) {
+    stopVideo();
+  }
   _dctrl->exitControlLoop();
   _dctrl->disconnect();
+}
+
+void QDroneDesktop::startVideo() {
+  _pVideo = new QVideoDisplay(_dctrl, this);
+  this->wVideoContainer->layout()->addWidget(_pVideo);
+}
+
+void QDroneDesktop::stopVideo() {
+  if (_pVideo) {
+    this->wVideoContainer->layout()->removeWidget(_pVideo);
+    delete _pVideo;
+    _pVideo = nullptr;
+  }
 }

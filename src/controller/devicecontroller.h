@@ -19,6 +19,7 @@
 #define DEVICECONTROLLER_H
 
 #include "model/racedronedata.h"
+#include "model/videoframefeed.h"
 
 struct DEVICE_CONTROLLER_DATA;
 typedef struct DEVICE_CONTROLLER_DATA DEVICE_CONTROLLER_DATA_T;
@@ -36,11 +37,16 @@ public:
   bool exitControlLoop();
   int ping();
   RACEDRONE_VALUES_T getValues();
+
+  VideoFrameFeed* startVideo();
+  void stopVideo();
   
 private:
   DEVICE_CONTROLLER_DATA_T* _handle;
   void _init_handle();
   bool _internal_connect();
+  int _send_media_stream(bool streamOn);
+  
   
   static void* _reader_loop(void* data);
   static void* _sender_loop(void* data);
