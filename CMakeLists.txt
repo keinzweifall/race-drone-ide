@@ -33,7 +33,7 @@ qt4_wrap_cpp(projectMoc src/ui/qimageprovider.h src/ui/qdronedesktop.h src/ui/qa
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${QT_INCLUDES} ${Boost_INCLUDE_DIRS} ${PARROT_SDK_INCLUDEDIR} ${RAPIDJSON_INCLUDEDIR} ${CMAKE_SOURCE_DIR}/src)
 
-set(race-drone-ide_SRCS src/model/videoframefeed.cpp src/ui/qimageprovider.cpp src/ui/qvideodisplay.cpp src/ui/qvideodisplay.cpp src/controller/devicecontroller.cpp src/ui/qdronedesktop.ui src/ui/qdronedesktop.cpp src/ui/qanimationcontrol.ui src/ui/qanimationcontrol.cpp src/ui/qdronedashboard.ui src/ui/qdronedashboard.cpp src/ui/qdrivecontrol.ui src/ui/qdrivecontrol.cpp src/main.cpp)
+set(race-drone-ide_SRCS src/model/cmdqueue.cpp src/model/videoframefeed.cpp src/ui/qimageprovider.cpp src/ui/qvideodisplay.cpp src/ui/qvideodisplay.cpp src/controller/devicecontroller.cpp src/ui/qdronedesktop.ui src/ui/qdronedesktop.cpp src/ui/qanimationcontrol.ui src/ui/qanimationcontrol.cpp src/ui/qdronedashboard.ui src/ui/qdronedashboard.cpp src/ui/qdrivecontrol.ui src/ui/qdrivecontrol.cpp src/main.cpp)
 
 add_executable(race-drone-ide ${race-drone-ide_SRCS} ${projectUI} ${projectMoc})
 set_property(TARGET race-drone-ide PROPERTY CXX_STANDARD 11)

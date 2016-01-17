@@ -18,11 +18,14 @@
 #ifndef DEVICECONTROLLER_H
 #define DEVICECONTROLLER_H
 
+#include <boost/thread.hpp>
+
 #include "model/racedronedata.h"
 #include "model/videoframefeed.h"
 
 struct DEVICE_CONTROLLER_DATA;
 typedef struct DEVICE_CONTROLLER_DATA DEVICE_CONTROLLER_DATA_T;
+class CmdQueue;
 
 class DeviceController
 {
@@ -41,12 +44,15 @@ public:
   VideoFrameFeed* startVideo();
   void stopVideo();
   
+  void setCmdQueue(CmdQueue* q) { _cmdq = q; }
+
 private:
   DEVICE_CONTROLLER_DATA_T* _handle;
+  CmdQueue* _cmdq;
+  
   void _init_handle();
   bool _internal_connect();
   int _send_media_stream(bool streamOn);
-  
   
   static void* _reader_loop(void* data);
   static void* _sender_loop(void* data);

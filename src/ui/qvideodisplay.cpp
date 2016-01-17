@@ -39,6 +39,9 @@ QVideoDisplay::~QVideoDisplay() {
 
   _imgProvider->stopUpdating();
   disconnect(_imgProvider, SIGNAL(newImageAvailable()), this, SLOT(setNewImage()));
+  delete _imgProvider;
+  _imgProvider = nullptr;
+  _dctrl->stopVideo();
 }
 
 

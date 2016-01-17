@@ -22,6 +22,7 @@
 
 #include "ui_qdrivecontrol.h"
 
+class CmdQueue;
 class DeviceController;
 
 class QDriveControl : public QFrame, public Ui::QDriveControl
@@ -43,12 +44,8 @@ public slots:
 signals:
 
 private:
-    bool _forward;
-    bool _backward;
-    bool _right;
-    bool _left;
     DeviceController* _dctrl;
-
+    CmdQueue* _cmdq;
 };
 
 #endif // QDRIVECONTROL_H

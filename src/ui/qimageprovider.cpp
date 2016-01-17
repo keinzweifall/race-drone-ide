@@ -64,7 +64,7 @@ void QImageProvider::stopUpdating() {
 void QImageProvider::refresh() {
   // BOOST_LOG_TRIVIAL(trace) << __LINE__ << "QImageProvider::refresh()";
 
-  frameptr_t pf = _feed->getLastFrame(true);
+  frameptr_t pf = _feed->getLastFrame();
   if (pf != nullptr) {
     _img.loadFromData(pf, _feed->getFrameSize(), "JPG");
     emit newImageAvailable();

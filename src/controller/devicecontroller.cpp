@@ -21,6 +21,8 @@
 #include <boost/log/trivial.hpp>
 #include <boost/concept_check.hpp>
 
+#include "model/cmdqueue.h"
+
 // @TODO
 // should be configurable from external source (cmd line, property-file)
 #define JS_IP_ADDRESS "192.168.2.1"
@@ -80,13 +82,15 @@ struct DEVICE_CONTROLLER_DATA {
   // FILE *_video_out;
   VideoFrameFeed* _video_feed;
   
+  RACEDRONE_VALUES_T* _values;
+  boost::mutex _mtx;
 };
 
 
 eARDISCOVERY_ERROR discovery_connection_send_json_Callback (uint8_t *dataTx, uint32_t *dataTxSize, void *customData);
 eARDISCOVERY_ERROR discovery_connection_receive_json_callback (uint8_t *dataRx, uint32_t dataRxSize, char *ip, void *customData);
 void on_disconnect_network (ARNETWORK_Manager_t *manager, ARNETWORKAL_Manager_t *alManager, void *customData);
-void register_arcommands_callbacks (DeviceController *pdc);
+void register_arcommands_callbacks (DEVICE_CONTROLLER_DATA_T *dcdata);
 void unregister_arcommands_callbacks();
 uint8_t *video_frame_complete_cb(eARSTREAM_READER_CAUSE cause, uint8_t *frame, uint32_t frameSize, int numberOfSkippedFrames, int isFlushFrame, uint32_t *newBufferCapacity, void *custom);
 eARNETWORK_MANAGER_CALLBACK_RETURN arnetworkCmdCallback(int buffer_id, uint8_t *data, void *custom, eARNETWORK_MANAGER_CALLBACK_STATUS cause);
@@ -184,6 +188,7 @@ DeviceController::DeviceController() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "DeviceController::DeviceController()";
 
   _handle = new DEVICE_CONTROLLER_DATA_T;
+  _handle->_values = new RACEDRONE_VALUES_T;
   _init_handle();
 }
 
@@ -193,13 +198,14 @@ DeviceController::~DeviceController() {
   if (isConnected()) {
     disconnect();
   }
+  delete _handle->_values;
   delete _handle;
 }
 
 bool DeviceController::connect() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "DeviceController::connect()";
 
-  register_arcommands_callbacks(this);
+  register_arcommands_callbacks(this->_handle);
   
   if ( ! _internal_connect() ) {
     disconnect();
@@ -272,16 +278,18 @@ bool DeviceController::isConnected() {
   
 RACEDRONE_VALUES_T DeviceController::getValues() {
   // BOOST_LOG_TRIVIAL(trace) << __LINE__ << "DeviceController::getValues()";
+  boost::lock_guard<boost::mutex> guard(_handle->_mtx);
+  
   RACEDRONE_VALUES_T pv;
 
-  pv.alert = rand() % 2;
-  pv.batteryChargePercentage = rand() % 100;
-  pv.connected = true;
-  pv.posture = "normal";
-  pv.speedInCmPerSec = rand() % 30;
-  pv.speedVal = rand() % 100;
-  pv.turnVal = rand() % 100;
-  pv.linkQuality = rand() % 7;
+  pv.alert = _handle->_values->alert;
+  pv.batteryChargePercentage = _handle->_values->batteryChargePercentage;
+  pv.connected = _handle->_values->connected;
+  pv.posture = _handle->_values->posture;
+  pv.speedInCmPerSec = _handle->_values->speedInCmPerSec;
+  pv.speedVal = _handle->_values->speedVal;
+  pv.turnVal = _handle->_values->turnVal;
+  pv.linkQuality = _handle->_values->linkQuality;
 
   return pv;
 }
@@ -373,6 +381,15 @@ void DeviceController::_init_handle() {
     _handle->_rdata_nonack = new READER_THREAD_DATA_T;
     _handle->_rdata_nonack->_bufferId = JS_NET_DC_NONACK_ID;
     _handle->_rdata_nonack->_dcp = this;
+
+    _handle->_values->alert = false;
+    _handle->_values->connected = false;
+    _handle->_values->batteryChargePercentage = -1.0;
+    _handle->_values->speedInCmPerSec = -1;
+    _handle->_values->speedVal = 0;
+    _handle->_values->turnVal = 0;
+    _handle->_values->linkQuality = 0;
+    _handle->_values->posture = "-none-";
 }
 
 bool DeviceController::_internal_connect() {
@@ -429,6 +446,8 @@ bool DeviceController::_internal_connect() {
     BOOST_LOG_TRIVIAL(error) << __LINE__ << "error starting network sender thread";
     return false;
   }
+
+  _handle->_values->connected = true;
   
   return true;
 }
@@ -439,7 +458,7 @@ VideoFrameFeed* DeviceController::startVideo() {
   
   eARSTREAM_ERROR err = ARSTREAM_OK;
 
-  _handle->_video_feed = new VideoFrameFeed(_handle->_arstreamFragSize, 1000);
+  _handle->_video_feed = new VideoFrameFeed(_handle->_arstreamFragSize, 100);
 
   // check if frame size is set
   if (_handle->_arstreamFragSize == 0 || _handle->_arstreamFragNb == 0) {
@@ -632,10 +651,23 @@ void* DeviceController::_sender_loop(void* p) {
 
   DeviceController* dcp = (DeviceController*) p;
   
+  // empty queue before start
+  dcp->_cmdq->clear();
+  
   while (!g_StopFlag) {
-    usleep(50000);
-    // send_all_states_cmd(dcp->_handle);
-    // send_PCMD_cmd(dcp->_handle, 1, 10, 0);
+    COMMAND_T cmd = dcp->_cmdq->get();
+
+    switch (cmd.type) {
+      case eCMD_NOCOMMAND:
+	break;
+      case eCMD_EMERGENCYSTOP:
+	break;
+      case eCMD_PILOTING:
+	send_PCMD_cmd(dcp->_handle, cmd.flag, cmd.speed, cmd.turn);
+	break;
+      case eCMD_ANIMATION:
+	break;
+    }
   }
   
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "leaving sender_loop...";
@@ -827,10 +859,40 @@ void ARCOMMANDS_Decoder_SetCommonCommonRebootCallback (ARCOMMANDS_Decoder_Common
 
 void pcmd_cb (uint8_t flag, int8_t speed, int8_t turn, void *pdc) {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "flag: " << (int)flag << ", speed: " << (int)speed << ", turn:" << (int)turn;
+
+  DEVICE_CONTROLLER_DATA_T *dc = (DEVICE_CONTROLLER_DATA_T *)pdc;
+  boost::lock_guard<boost::mutex> guard(dc->_mtx);
+  dc->_values->speedVal = speed;
+  dc->_values->turnVal = turn;
 }
 
 void speed_changed_cb (int8_t speed, int16_t realSpeed, void *pdc) {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "speed: " << (int)speed << ", realSpeed in cm/s:" << (int)realSpeed;
+
+  DEVICE_CONTROLLER_DATA_T *dc = (DEVICE_CONTROLLER_DATA_T *)pdc;
+  boost::lock_guard<boost::mutex> guard(dc->_mtx);
+  dc->_values->speedInCmPerSec = realSpeed;
+  dc->_values->speedVal = speed;
+}
+
+void video_enabled_changed_cb (eARCOMMANDS_JUMPINGSUMO_MEDIASTREAMINGSTATE_VIDEOENABLECHANGED_ENABLED cause, void *pdc) {
+  switch(cause) {
+    case ARCOMMANDS_JUMPINGSUMO_MEDIASTREAMINGSTATE_VIDEOENABLECHANGED_ENABLED_ENABLED:
+      BOOST_LOG_TRIVIAL(trace) << __LINE__ << "video enabled";
+      break;
+    case ARCOMMANDS_JUMPINGSUMO_MEDIASTREAMINGSTATE_VIDEOENABLECHANGED_ENABLED_DISABLED:
+      BOOST_LOG_TRIVIAL(trace) << __LINE__ << "video disabled";
+      break;
+    case ARCOMMANDS_JUMPINGSUMO_MEDIASTREAMINGSTATE_VIDEOENABLECHANGED_ENABLED_ERROR:
+      BOOST_LOG_TRIVIAL(trace) << __LINE__ << "video enabled error";
+      break;
+    case ARCOMMANDS_JUMPINGSUMO_MEDIASTREAMINGSTATE_VIDEOENABLECHANGED_ENABLED_MAX:
+      BOOST_LOG_TRIVIAL(trace) << __LINE__ << "video enabled max";
+      break;
+    default:
+      BOOST_LOG_TRIVIAL(warning) << __LINE__ << "unknown value for cause:" << cause;
+      break;
+  }
 }
 
 void all_states_cb (void *pdc) {
@@ -839,19 +901,28 @@ void all_states_cb (void *pdc) {
 
 void battery_state_changed_cb (uint8_t percent, void *pdc) {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "battery charge: " << (unsigned int)percent;
+
+  DEVICE_CONTROLLER_DATA_T *dc = (DEVICE_CONTROLLER_DATA_T *)pdc;
+  boost::lock_guard<boost::mutex> guard(dc->_mtx);
+  dc->_values->batteryChargePercentage = percent;
 }
 
 void network_state_link_quality_state_changed_cb (uint8_t quality, void *pdc) {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << "link quality: " << (unsigned int)quality;
+
+  DEVICE_CONTROLLER_DATA_T *dc = (DEVICE_CONTROLLER_DATA_T *)pdc;
+  boost::lock_guard<boost::mutex> guard(dc->_mtx);
+  dc->_values->linkQuality = quality;
 }
 
-void register_arcommands_callbacks (DeviceController *pdc)
+void register_arcommands_callbacks (DEVICE_CONTROLLER_DATA_T *dcdata)
 {
-  ARCOMMANDS_Decoder_SetJumpingSumoPilotingPCMDCallback(pcmd_cb, pdc);
-  ARCOMMANDS_Decoder_SetCommonCommonAllStatesCallback(all_states_cb, pdc);
-  ARCOMMANDS_Decoder_SetCommonCommonStateBatteryStateChangedCallback(battery_state_changed_cb, pdc);
-  ARCOMMANDS_Decoder_SetJumpingSumoNetworkStateLinkQualityChangedCallback(network_state_link_quality_state_changed_cb, pdc);
-  ARCOMMANDS_Decoder_SetJumpingSumoPilotingStateSpeedChangedCallback(speed_changed_cb, pdc);
+  ARCOMMANDS_Decoder_SetJumpingSumoPilotingPCMDCallback(pcmd_cb, dcdata);
+  ARCOMMANDS_Decoder_SetCommonCommonAllStatesCallback(all_states_cb, dcdata);
+  ARCOMMANDS_Decoder_SetCommonCommonStateBatteryStateChangedCallback(battery_state_changed_cb, dcdata);
+  ARCOMMANDS_Decoder_SetJumpingSumoNetworkStateLinkQualityChangedCallback(network_state_link_quality_state_changed_cb, dcdata);
+  ARCOMMANDS_Decoder_SetJumpingSumoPilotingStateSpeedChangedCallback(speed_changed_cb, dcdata);
+  ARCOMMANDS_Decoder_SetJumpingSumoMediaStreamingStateVideoEnableChangedCallback(video_enabled_changed_cb, dcdata);
 }
 
 void unregister_arcommands_callbacks ()
@@ -861,5 +932,6 @@ void unregister_arcommands_callbacks ()
   ARCOMMANDS_Decoder_SetCommonCommonStateBatteryStateChangedCallback (NULL, NULL);
   ARCOMMANDS_Decoder_SetJumpingSumoNetworkStateLinkQualityChangedCallback(NULL, NULL);
   ARCOMMANDS_Decoder_SetJumpingSumoPilotingStateSpeedChangedCallback(NULL, NULL);
+  ARCOMMANDS_Decoder_SetJumpingSumoMediaStreamingStateVideoEnableChangedCallback(NULL, NULL);
 }
 

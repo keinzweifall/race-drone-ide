@@ -15,13 +15,12 @@
  * 
  */
 
-
-#include <queue>
-
-#include <boost/thread.hpp>
-
 #ifndef VIDEOFRAMEFEED_H
 #define VIDEOFRAMEFEED_H
+
+#include <vector>
+
+#include <boost/thread.hpp>
 
 typedef uint8_t* frameptr_t;
 
@@ -32,13 +31,15 @@ public:
   ~VideoFrameFeed();
   
   void setNewFrame(frameptr_t pf);
-  frameptr_t getLastFrame(bool pConsuming);
+  frameptr_t getLastFrame();
   unsigned int getFrameCount();
 
   unsigned int getFrameSize() { return _frameSize; }
   
 private:
-  std::queue<frameptr_t> _frames;
+  std::vector<frameptr_t> _ringBuf;
+  unsigned int _lastInsertPos;
+  unsigned long _frameCnt;
   unsigned int _frameSize;
   unsigned long _maxFrames;
   boost::mutex _mtx;

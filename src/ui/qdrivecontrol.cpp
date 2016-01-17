@@ -18,6 +18,8 @@
 #include <boost/log/trivial.hpp>
 
 #include "ui/qdrivecontrol.h"
+#include "model/cmdqueue.h"
+#include "controller/devicecontroller.h"
 
 QDriveControl::QDriveControl(DeviceController* pdc, QWidget* parent) : _dctrl(pdc), QFrame(parent) {
   setupUi(this);
@@ -33,49 +35,53 @@ QDriveControl::QDriveControl(DeviceController* pdc, QWidget* parent) : _dctrl(pd
   connect(pbRight, SIGNAL(pressed()), this, SLOT(rightPressed()));
   connect(pbRight, SIGNAL(released()), this, SLOT(rightReleased()));
   connect(pbStop, SIGNAL(clicked(bool)), this, SLOT(stopClicked()));
+  
+  _cmdq = new CmdQueue(100);
+  _dctrl->setCmdQueue(_cmdq);
 }
   
 void QDriveControl::forwardPressed() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot forwardPressed";
-  _forward = true;
+  COMMAND_T cmd = create_PILOTING(1, 50, 0);
+  _cmdq->put(cmd);
 }
 
 void QDriveControl::forwardReleased() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot forwardReleased";
-  _forward = false;
 }
 
 void QDriveControl::backwardPressed() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot backwardPressed";
-  _backward = true;
+  COMMAND_T cmd = create_PILOTING(1, -50, 0);
+  _cmdq->put(cmd);
 }
 
 void QDriveControl::backwardReleased() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot backwardReleased";
-  _backward = false;
 }
 
 void QDriveControl::leftPressed() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot leftPressed";
-  _left = true;
+  COMMAND_T cmd = create_PILOTING(1, 0, -5);
+  _cmdq->put(cmd);
 }
 
 void QDriveControl::leftReleased() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot leftReleased";
-  _left = false;
 }
 
 void QDriveControl::rightPressed() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot rightPressed";
-  _right = true;
+  COMMAND_T cmd = create_PILOTING(1, 0, 5);
+  _cmdq->put(cmd);
 }
 
 void QDriveControl::rightReleased() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot rightReleased";
-  _right = false;
 }
 
 void QDriveControl::stopClicked() {
   BOOST_LOG_TRIVIAL(trace) << __LINE__ << " slot stopClicked";
-  _forward = _backward = _left = _right = false;
+  COMMAND_T cmd = create_PILOTING(0, 0, 0);
+  _cmdq->put(cmd);
 }
